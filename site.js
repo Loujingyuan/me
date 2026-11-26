@@ -36,10 +36,14 @@ function updateIdentity() {
 }
 updateIdentity();
 
+function squareImage(src, alt = "") {
+  return `<img class="entry-image" src="${esc(src)}" alt="${esc(alt)}" width="56" height="56" loading="lazy">`;
+}
+
 function historySection(title, english, entries) {
   const rows = entries.map(item => `
     <li class="entry">
-      <span class="seal ${esc(item.tone)}" aria-hidden="true">${esc(item.mark)}</span>
+      ${item.image ? squareImage(item.image) : `<span class="seal ${esc(item.tone)}" aria-hidden="true">${esc(item.mark)}</span>`}
       <div class="entry-body"><div class="entry-heading"><h3>${esc(item.name)}</h3><span class="date">${esc(item.date)}</span></div>
       <p class="role">${esc(item.role)}</p>
       ${item.place ? `<p class="place">${esc(item.place)}</p>` : ""}
@@ -62,25 +66,33 @@ function pageTitle(title, english) {
 }
 function links(items = []) {
   return items.filter(item => /^https?:\/\//i.test(item.url)).map(item =>
-    `<a class="external" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${icon("link")}${esc(item.label)}</a>`
+    `<a class="external" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${item.image ? squareImage(item.image) : icon("link")}${esc(item.label)}</a>`
   ).join("");
+}
+function articleWithImages(content, images) {
+  const figures = images.filter(img => img.src).map(img =>
+    `<figure>${squareImage(img.src, img.alt || img.caption || "")}${img.caption ? `<figcaption>${esc(img.caption)}</figcaption>` : ""}</figure>`
+  ).join("");
+  if (!figures) return `<article>${content}</article>`;
+  return `<article class="illustrated"><div class="entry-images">${figures}</div><div class="article-text">${content}</div></article>`;
 }
 function research() {
   return pageTitle("科研项目", "Research & Projects") + person.projects.map(p =>
-    `<article><div class="meta">${esc(p.role)}<i>·</i>${esc(p.date)}</div><h2>${esc(p.title)}</h2>
-    <p>${esc(p.summary)}</p>
-    ${(p.images ?? []).map(img => `<figure><img loading="lazy" src="${esc(img.src)}" alt="${esc(img.alt)}">${img.caption ? `<figcaption>${esc(img.caption)}</figcaption>` : ""}</figure>`).join("")}
-    <div class="links">${links(p.links)}</div></article>`
+    articleWithImages(
+      `<div class="meta">${esc(p.role)}<i>·</i>${esc(p.date)}</div><h2>${esc(p.title)}</h2>
+      <p>${esc(p.summary)}</p><div class="links">${links(p.links)}</div>`,
+      p.images ?? []
+    )
   ).join("");
 }
 function service() {
   return pageTitle("社会服务", "Community Service") + person.service.map(s =>
-    `<article><h2>${esc(s.title)}</h2><div class="meta">${esc(s.meta)}</div><p>${esc(s.body)}</p></article>`
+    articleWithImages(`<h2>${esc(s.title)}</h2><div class="meta">${esc(s.meta)}</div><p>${esc(s.body)}</p>`, [{ src: s.image, alt: s.imageAlt }])
   ).join("");
 }
 function about() {
   return pageTitle("关于我", "Beyond Work") + person.interests.map(i =>
-    `<article><h2>${esc(i.title)}</h2><p>${esc(i.body)}</p></article>`
+    articleWithImages(`<h2>${esc(i.title)}</h2><p>${esc(i.body)}</p>`, [{ src: i.image, alt: i.imageAlt }])
   ).join("") + `<article><h2>联系与链接</h2><div class="links"><a class="external" href="mailto:${esc(person.email)}">${icon("mail")}${esc(person.email)}</a>${links(person.social)}</div></article>`;
 }
 const main = document.querySelector("main");

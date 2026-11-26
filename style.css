@@ -5,6 +5,7 @@
   --muted: #65656c;
   --line: #e7e7ea;
   --side: clamp(208px, 19vw, 268px);
+  --entry-image-size: 56px;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -53,6 +54,10 @@ h1 { font-size: clamp(45px, 4.8vw, 76px); line-height: 1.15; letter-spacing: -.0
 .section-title span { font-size: 15px; color: var(--muted); letter-spacing: -.01em; }
 .entries { list-style: none; padding: 0; margin: 9px 0 12px; }
 .entry { display: flex; gap: 17px; padding-top: 21px; }
+.entry-image {
+  display: block; flex: none; width: var(--entry-image-size); height: var(--entry-image-size);
+  object-fit: cover; object-position: center; border-radius: 10px; background: #f5f5f7;
+}
 .seal { flex: none; display: grid; place-items: center; width: 49px; height: 49px; border-radius: 13px; font-family: Georgia, serif; font-size: 18px; letter-spacing: -.07em; font-weight: 600; }
 .wine { background: #f3e9ea; color: #79353f; }
 .red { background: #f8eaea; color: #993d43; }
@@ -82,9 +87,10 @@ article p { margin-top: 10px; max-width: 48em; }
 .external { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: #245a95; }
 .external:hover, .side-foot a:hover { text-decoration: underline; }
 .external svg { width: 16px; height: 16px; }
-figure { margin-top: 18px; }
-figure img { border-radius: 12px; max-width: 100%; max-height: 540px; display: block; }
-figcaption { margin-top: 5px; }
+.illustrated { display: flex; align-items: flex-start; gap: 17px; }
+.article-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.entry-images { flex: none; width: var(--entry-image-size); display: grid; gap: 8px; }
+.entry-images figcaption { margin-top: 3px; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
 .skip { position: fixed; left: 12px; top: -100px; z-index: 5; background: #fff; padding: 12px; }
 .skip:focus { top: 12px; }
 @media (max-width: 790px) {
@@ -106,7 +112,7 @@ figcaption { margin-top: 5px; }
   .hero h1 { align-self: end; }
   .topics, .intro, .button { grid-column: 1 / -1; }
   .button { justify-self: start; }
-  .entry { gap: 12px; }
+  .entry, .illustrated { gap: 12px; }
   .seal { width: 39px; height: 39px; font-size: 15px; border-radius: 10px; }
   .entry-heading { display: grid; }
   .entry h3 { font-size: 18px; }

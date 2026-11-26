@@ -1,16 +1,16 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
-const historyFields = { name: "机构名称", role: "学位或职务", date: "时间", place: "地点", note: "简要说明", mark: "图标缩写", tone: "图标颜色" };
+const historyFields = { name: "机构名称", image: "单位图标图片", role: "学位或职务", date: "时间", place: "地点", note: "简要说明", mark: "图标缩写（无图片时显示）", tone: "图标颜色（无图片时显示）" };
 const linkFields = { label: "链接文字", url: "网址（含 https:// 或 http://）" };
 const sections = {
   profile: ["个人介绍", "home", { name: "中文名", englishName: "英文名", initials: "姓名缩写", portrait: "个人照片", email: "邮箱", topics: "研究方向（用逗号分隔）", intro: "个人介绍" }],
   education: ["教育背景", "home", historyFields],
   work: ["工作经历", "home", historyFields],
   projects: ["科研项目", "research", { title: "项目名称", role: "项目角色", date: "时间", summary: "项目介绍" }],
-  service: ["社会服务", "service", { title: "服务名称", meta: "机构与时间", body: "服务经历" }],
-  interests: ["兴趣爱好", "about", { title: "爱好名称", body: "介绍" }],
-  social: ["社交链接", "about", linkFields]
+  service: ["社会服务", "service", { title: "服务名称", image: "左侧配图", imageAlt: "图片说明", meta: "机构与时间", body: "服务经历" }],
+  interests: ["兴趣爱好", "about", { title: "爱好名称", image: "左侧配图", imageAlt: "图片说明", body: "介绍" }],
+  social: ["社交链接", "about", { ...linkFields, image: "链接图标图片" }]
 };
 const multiline = new Set(["note", "intro", "summary", "body"]);
 const tones = { ink: "灰", wine: "酒红", red: "红", blue: "蓝", green: "绿" };
@@ -66,55 +66,74 @@ function blockExport(value) {
   for (const id of ["save", "download", "publish"]) $(id).disabled = value;
 }
 
-async function loadImage(file) {
+async function loadImage(file, square) {
   const url = URL.createObjectURL(file);
   try {
     const image = new Image();
     image.src = url;
     await image.decode();
-    const scale = Math.min(1, 1440 / Math.max(image.width, image.height));
+    const crop = Math.min(image.naturalWidth, image.naturalHeight);
+    const width = square ? crop : image.naturalWidth;
+    const height = square ? crop : image.naturalHeight;
+    const scale = Math.min(1, (square ? 256 : 1440) / Math.max(width, height));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.width * scale));
-    canvas.height = Math.max(1, Math.round(image.height * scale));
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.82);
+    ctx.drawImage(image, (image.naturalWidth - width) / 2, (image.naturalHeight - height) / 2,
+      width, height, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL(square ? "image/webp" : "image/jpeg", 0.82);
   } finally { URL.revokeObjectURL(url); }
 }
 function photo(container, target, key, text) {
+  const square = key !== "portrait";
+  const group = node("div", "", "photo-field");
   const label = node("label", text);
-  const image = node("img", "", "thumb");
-  image.alt = text;
-  if (target[key]) { image.src = target[key]; label.append(image); }
+  const image = node("img", "", square ? "thumb square-thumb" : "thumb");
+  image.alt = "";
+  if (target[key]) { image.src = target[key]; group.append(image); }
   const input = node("input");
   input.type = "file";
   input.accept = "image/jpeg,image/png,image/webp";
+  const remove = button("移除图片", () => {
+    delete target[key];
+    image.remove();
+    remove.hidden = true;
+    changed();
+  });
+  remove.hidden = !target[key];
   input.addEventListener("change", async () => {
     if (!input.files.length) return;
-    const editing = current();
     pendingImages++;
     blockExport(true);
     input.disabled = true;
+    remove.disabled = true;
     status("正在处理图片…");
     try {
-      target[key] = await loadImage(input.files[0]);
-      if (editing === current()) drawFields();
+      target[key] = await loadImage(input.files[0], square);
+      image.src = target[key];
+      group.prepend(image);
+      remove.hidden = false;
       changed();
     } catch { status("图片读取失败，请选择 JPG、PNG 或 WebP 文件。"); }
     finally {
       pendingImages--;
       blockExport(pendingImages > 0);
+      input.value = "";
       input.disabled = false;
+      remove.disabled = false;
     }
   });
   label.append(input);
-  container.append(label);
+  group.append(label);
+  if (key === "image") group.append(remove);
+  container.append(group);
 }
 function fields(container, record, schema) {
   for (const [key, text] of Object.entries(schema)) {
-    if (key === "portrait" || key === "src") { photo(container, record, key, text); continue; }
+    if (key === "portrait" || key === "src" || key === "image") { photo(container, record, key, text); continue; }
     const label = node("label", text);
     const input = node(key === "tone" ? "select" : multiline.has(key) ? "textarea" : "input");
     if (key === "tone") for (const [code, name] of Object.entries(tones)) input.add(new Option(name, code));
@@ -162,7 +181,7 @@ function drawFields() {
   fields(box, record, sections[section][2]);
   if (section === "projects") {
     collection(box, record, "links", "项目链接", linkFields);
-    collection(box, record, "images", "项目图片", { src: "选择图片", alt: "图片说明", caption: "图注" });
+    collection(box, record, "images", "项目图片", { src: "选择左侧图片", alt: "图片说明", caption: "图注" });
   }
 }
 function draw() {
