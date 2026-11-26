@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>编辑个人网站</title>
+  <link rel="stylesheet" href="editor.css">
+  <script defer src="content.js"></script>
+  <script defer src="editor.js"></script>
+</head>
+<body>
+  <header><div><h1>编辑个人网站</h1><p id="status" role="status">正在读取内容…</p></div>
+    <div class="actions"><button id="save">保存内容文件</button><button id="publish" class="primary">更新到 GitHub</button></div>
+  </header>
+  <main>
+    <section class="panel" aria-label="内容编辑">
+      <label>编辑栏目<select id="section"></select></label>
+      <div id="records"></div>
+      <div id="fields"></div>
+    </section>
+    <section class="preview" aria-label="网站预览"><div class="preview-title"><h2>实时预览</h2><a href="index.html" target="_blank" rel="noopener">查看已保存的网站</a></div>
+      <iframe id="preview" title="网站实时预览" src="index.html?preview"></iframe>
+    </section>
+  </main>
+  <dialog id="publish-dialog">
+    <h2>更新到 GitHub</h2>
+    <p>下载本次编辑的内容文件，然后将它上传到仓库根目录，保留文件名 <b>content.js</b>。</p>
+    <p>在 GitHub 点击 <b>Commit changes</b> 提交到 main。启用 Pages 后，网站会自动更新。</p>
+    <div class="actions"><button id="download">下载 content.js</button><a class="primary action" href="https://github.com/1340883027/Resume/upload/main" target="_blank" rel="noopener">打开 GitHub 上传页</a></div>
+    <form method="dialog"><button>完成</button></form>
+  </dialog>
+</body>
+</html>
