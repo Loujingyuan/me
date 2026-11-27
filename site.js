@@ -15,16 +15,21 @@ function icon(name) {
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 }
-const pages = {
-  home: { label: "首页", render: home },
-  research: { label: "科研项目", render: research },
-  service: { label: "社会服务", render: service },
-  about: { label: "关于我", render: about }
-};
 const nav = document.querySelector("nav");
-nav.innerHTML = Object.entries(pages).map(([key, page]) =>
-  `<a href="#${key}">${icon(key)}<span>${page.label}</span></a>`
-).join("");
+function sitePages() {
+  const sections = readSections(person).map(section => [
+    section.id, {
+      label: section.title || "未命名栏目",
+      icon: section.id === "service" ? "service" : "research",
+      render: () => contentSection(section)
+    }
+  ]);
+  return new Map([
+    ["home", { label: "首页", icon: "home", render: home }],
+    ...sections,
+    ["about", { label: "关于我", icon: "about", render: about }]
+  ]);
+}
 function updateIdentity() {
   document.querySelector(".monogram").textContent = person.initials;
   document.querySelector("#side-name").textContent = person.name;
@@ -36,14 +41,20 @@ function updateIdentity() {
 }
 updateIdentity();
 
-function squareImage(src, alt = "") {
-  return `<img class="entry-image" src="${esc(src)}" alt="${esc(alt)}" width="56" height="56" loading="lazy">`;
+function scaleValue(value, fallback, min, max) {
+  return Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+}
+function croppedImage(src, alt = "", crop = {}, className = "entry-image") {
+  const x = scaleValue(crop.x, 50, 0, 100);
+  const y = scaleValue(crop.y, 50, 0, 100);
+  const zoom = scaleValue(crop.zoom, 1, 1, 4);
+  return `<span class="crop-frame ${className}" style="--crop-x:${x}%;--crop-y:${y}%;--crop-zoom:${zoom}"><img src="${esc(src)}" alt="${esc(alt)}" loading="lazy"></span>`;
 }
 
 function historySection(title, english, entries) {
   const rows = entries.map(item => `
     <li class="entry">
-      ${item.image ? squareImage(item.image) : `<span class="seal ${esc(item.tone)}" aria-hidden="true">${esc(item.mark)}</span>`}
+      ${item.image ? croppedImage(item.image, "", item.crop) : `<span class="seal ${esc(item.tone)}" aria-hidden="true">${esc(item.mark)}</span>`}
       <div class="entry-body"><div class="entry-heading"><h3>${esc(item.name)}</h3><span class="date">${esc(item.date)}</span></div>
       <p class="role">${esc(item.role)}</p>
       ${item.place ? `<p class="place">${esc(item.place)}</p>` : ""}
@@ -57,54 +68,53 @@ function home() {
     <div class="topics">${person.topics.map(t => `<span>${esc(t)}</span>`).join("")}</div>
     <p class="intro">${esc(person.intro)}</p>
     <a class="button" href="mailto:${esc(person.email)}">${icon("mail")}联系我</a>
-    </div><img class="portrait" src="${esc(person.portrait)}" alt="${esc(person.name)}的个人照片"></header>
+    </div>${croppedImage(person.portrait, person.name + "的个人照片", person.crop ?? { y: 28 }, "portrait")}</header>
     ${historySection("教育背景", "Education", person.education)}
     ${historySection("工作经历", "Experience", person.work)}`;
 }
 function pageTitle(title, english) {
-  return `<header class="page-title"><h1>${title}</h1><p lang="en">${english}</p></header>`;
+  return `<header class="page-title"><h1>${esc(title)}</h1>${english ? `<p lang="en">${esc(english)}</p>` : ""}</header>`;
 }
 function links(items = []) {
   return items.filter(item => /^https?:\/\//i.test(item.url)).map(item =>
-    `<a class="external" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${item.image ? squareImage(item.image) : icon("link")}${esc(item.label)}</a>`
+    `<a class="external" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${item.image ? croppedImage(item.image, "", item.crop) : icon("link")}${esc(item.label)}</a>`
   ).join("");
 }
 function articleWithImages(content, images) {
   const figures = images.filter(img => img.src).map(img =>
-    `<figure>${squareImage(img.src, img.alt || img.caption || "")}${img.caption ? `<figcaption>${esc(img.caption)}</figcaption>` : ""}</figure>`
+    `<figure>${croppedImage(img.src, img.alt || "", img.crop, "article-image")}${img.caption ? `<figcaption>${esc(img.caption)}</figcaption>` : ""}</figure>`
   ).join("");
   if (!figures) return `<article>${content}</article>`;
   return `<article class="illustrated"><div class="entry-images">${figures}</div><div class="article-text">${content}</div></article>`;
 }
-function research() {
-  return pageTitle("科研项目", "Research & Projects") + person.projects.map(p =>
-    articleWithImages(
-      `<div class="meta">${esc(p.role)}<i>·</i>${esc(p.date)}</div><h2>${esc(p.title)}</h2>
-      <p>${esc(p.summary)}</p><div class="links">${links(p.links)}</div>`,
-      p.images ?? []
-    )
-  ).join("");
-}
-function service() {
-  return pageTitle("社会服务", "Community Service") + person.service.map(s =>
-    articleWithImages(`<h2>${esc(s.title)}</h2><div class="meta">${esc(s.meta)}</div><p>${esc(s.body)}</p>`, [{ src: s.image, alt: s.imageAlt }])
-  ).join("");
+function contentSection(section) {
+  return pageTitle(section.title || "未命名栏目", section.subtitle) + section.entries.map(item => {
+    const details = [item.role, item.date].filter(Boolean).map(esc).join(" · ");
+    return articleWithImages(
+      `${details ? `<div class="meta">${details}</div>` : ""}<h2>${esc(item.title)}</h2>
+      ${item.summary ? `<p>${esc(item.summary)}</p>` : ""}<div class="links">${links(item.links)}</div>`,
+      item.images ?? []
+    );
+  }).join("");
 }
 function about() {
   return pageTitle("关于我", "Beyond Work") + person.interests.map(i =>
-    articleWithImages(`<h2>${esc(i.title)}</h2><p>${esc(i.body)}</p>`, [{ src: i.image, alt: i.imageAlt }])
+    articleWithImages(`<h2>${esc(i.title)}</h2><p>${esc(i.body)}</p>`, [{ src: i.image, alt: i.imageAlt, crop: i.crop }])
   ).join("") + `<article><h2>联系与链接</h2><div class="links"><a class="external" href="mailto:${esc(person.email)}">${icon("mail")}${esc(person.email)}</a>${links(person.social)}</div></article>`;
 }
 const main = document.querySelector("main");
 function showPage(focus = false, hash = location.hash.slice(1), resetScroll = true) {
-  const key = Object.hasOwn(pages, hash) ? hash : "home";
-  main.innerHTML = pages[key].render();
-  document.title = pages[key].label + " · " + person.name;
-  for (const anchor of nav.querySelectorAll("a")) {
-    if (anchor.hash === "#" + key) anchor.setAttribute("aria-current", "page");
-    else anchor.removeAttribute("aria-current");
-  }
-  if (focus) main.focus({ preventScroll: true });
+  const pages = sitePages();
+  const key = pages.has(hash) ? hash : "home";
+  const page = pages.get(key);
+  const focusNav = nav.contains(document.activeElement);
+  nav.innerHTML = Array.from(pages, ([id, item]) =>
+    `<a href="#${esc(id)}"${id === key ? ' aria-current="page"' : ""}>${icon(item.icon)}<span>${esc(item.label)}</span></a>`
+  ).join("");
+  main.innerHTML = page.render();
+  document.title = page.label + " · " + person.name;
+  if (focusNav) nav.querySelector("[aria-current]").focus({ preventScroll: true });
+  else if (focus) main.focus({ preventScroll: true });
   if (resetScroll) window.scrollTo(0, 0);
 }
 document.querySelector(".skip").addEventListener("click", event => {
@@ -124,9 +134,10 @@ if (window.parent !== window && location.search === "?preview") {
     const { profile, page, section, index } = event.data;
     person = profile;
     updateIdentity();
+    const scroll = window.scrollY;
     showPage(false, page, false);
     const target = [page, section, index].join("/");
-    if (target === lastTarget) return;
+    if (target === lastTarget) { window.scrollTo(0, scroll); return; }
     lastTarget = target;
     let entry;
     if (section === "education" || section === "work") {

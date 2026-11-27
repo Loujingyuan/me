@@ -7,6 +7,7 @@
   <title>编辑个人网站</title>
   <link rel="stylesheet" href="editor.css">
   <script defer src="content.js"></script>
+  <script defer src="profile.js"></script>
   <script defer src="editor.js"></script>
 </head>
 <body>
@@ -16,6 +17,7 @@
   <main>
     <section class="panel" aria-label="内容编辑">
       <label>编辑栏目<select id="section"></select></label>
+      <div id="section-controls"></div>
       <div id="records"></div>
       <div id="fields"></div>
     </section>
@@ -27,7 +29,7 @@
     <h2>更新到 GitHub</h2>
     <p>下载本次编辑的内容文件，然后将它上传到仓库根目录，保留文件名 <b>content.js</b>。</p>
     <p>在 GitHub 点击 <b>Commit changes</b> 提交到 main。启用 Pages 后，网站会自动更新。</p>
-    <div class="actions"><button id="download">下载 content.js</button><a class="primary action" href="https://github.com/1340883027/Resume/upload/main" target="_blank" rel="noopener">打开 GitHub 上传页</a></div>
+    <div class="actions"><button id="download">下载 content.js</button><a class="primary action" href="https://github.com/Loujingyuan/me/upload/main" target="_blank" rel="noopener">打开 GitHub 上传页</a></div>
     <form method="dialog"><button>完成</button></form>
   </dialog>
 </body>
